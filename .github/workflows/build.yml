@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Android CI Build
 
 on:
   push:
@@ -14,21 +14,28 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up JDK 11
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '11'
         distribution: 'temurin'
-        cache: gradle
+        # تم إزالة سطر cache: gradle لتجنب فشل البناء إذا تغير مسار الملفات
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
+    - name: Find Project Root and Build APK
+      run: |
+        # البحث عن مكان ملف gradlew تلقائياً والدخول إلى مجلده
+        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        if [ -z "$GRADLEW_PATH" ]; then
+          echo "Error: gradlew file not found! Make sure you extracted the zip file before uploading."
+          exit 1
+        fi
+        PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+        echo "Building project in directory: $PROJECT_DIR"
+        cd "$PROJECT_DIR"
+        chmod +x gradlew
+        ./gradlew assembleDebug
 
     - name: Upload Compiled APK
       uses: actions/upload-artifact@v4
       with:
-        name: WapPushRemoteModemCrash-debug
-        path: app/build/outputs/apk/debug/*.apk
-        
+        name: app-debug-apk
+        path: "**/*.apk"
